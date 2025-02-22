@@ -11,5 +11,5 @@ Needs the `keyboard` library to be installed to correctly detect keyboard inputs
 `LEFT_ARROW`: Moves to the top item on the page\
 `RIGHT_ARROW`: Moves to the bottom item on the page\
 `ENTER`: Enter a folder or open a file\
-`BACKSPACE`: Travel up a directory (you can also use the three dots at the top)\
+`BACKSPACE`: Travel up a directory (you can also use the two dots at the top)\
 `ESC`: Exit the application
