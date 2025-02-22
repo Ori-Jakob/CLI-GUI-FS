@@ -1,5 +1,6 @@
 import os,sys,enum,time,subprocess,platform
 PLATFORM = platform.system()
+TERMINAL_OFFSET = 4
 
 try:
     import keyboard
@@ -49,12 +50,15 @@ class Structure:
         for root in os.listdir(self.dir):
             self.root.append(Node(self.dir + '\\' + root, root))
         self.print_dir()
+    def __instructions__(self):
+        print(Colors.YELLOW + "UP/DOWN=Move up/down, LEFT/RIGHT=Move up/down page, ENTER=Open folder/file,  BACKSPACE=Move up directory" + Colors.BLUE)
+        print("Directory: " + self.dir + Colors.WHITE)
 
     def print_dir(self):
 
         os.system('cls')
-        print(Colors.BLUE + "Directory: " + self.dir + Colors.WHITE)
-        terminal_size = os.get_terminal_size().lines - 3
+        self.__instructions__()
+        terminal_size = os.get_terminal_size().lines - TERMINAL_OFFSET
 
 
 
@@ -71,7 +75,7 @@ class Structure:
                 print(Colors.WHITE, end='')
 
             if self.root[i].type == FSType.DIRECTORY:
-                print('├ ', end='')    
+                print('├─', end='')    
 
             print(self.root[i].name)
     
@@ -94,7 +98,11 @@ def main():
                 directory.move(-1)
             case "down":
                 directory.move(1)
-            case "right" | "enter":
+            case  "right":
+                directory.move(os.get_terminal_size().lines - TERMINAL_OFFSET)
+            case "left":
+                directory.move(-1 * (os.get_terminal_size().lines - TERMINAL_OFFSET))
+            case"enter":
                 item = directory.root[directory.position]
                 if directory.root[directory.position].type == FSType.DIRECTORY:
                     directory.update_dir(item.path)
@@ -108,14 +116,14 @@ def main():
                             subprocess.call(('xdg-open', item.path))
                     except Exception:
                         print(f"{Colors.RED}ERROR: Could not open file '{item.name}'{Colors.WHITE}")
-            case "left" | "backspace":
+            case "backspace":
                 directory.update_dir(directory.root[0].path)
             case "esc":
                 print(Colors.YELLOW + "\nGoodbye!" + Colors.WHITE)
                 time.sleep(0.5)
                 sys.exit(1)
 
-        time.sleep(0.125)
+        time.sleep(0.13)
         
 
 if __name__ == "__main__":
