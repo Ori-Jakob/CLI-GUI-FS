@@ -1,6 +1,7 @@
 # CLI-GUI-FS
 A simple proof of concept for creating a CLI GUI that can traverse the file system.\
-By default, the menu will open in the current working directory.
+By default, the menu will open in the current working directory.\
+Needs the `keyboard` library to be installed to correctly detect keyboard inputs.
 
 
 # Controls
