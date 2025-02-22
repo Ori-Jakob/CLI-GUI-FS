@@ -1,6 +1,7 @@
-import os,sys,enum,time
-
+import os,sys,enum,time,subprocess,platform
+PLATFORM = platform.system()
 try:
+
     import keyboard
 except Exception as e:
     print(e)
@@ -51,10 +52,23 @@ class Structure:
         self.print_dir()
 
     def print_dir(self):
+
         os.system('cls')
-        for i in range(len(self.root)):
+        terminal_size = os.get_terminal_size().lines - 3
+
+
+
+        start = self.position - terminal_size if self.position > terminal_size else 0
+        loop_amount = len(self.root) if len(self.root) < terminal_size else terminal_size + start + 1
+
+
+
+        for i in range(start, loop_amount):
+
             if i == self.position:
                 print(bcolors.OKGREEN + '> ', end="")
+
+
             else:
                 print(bcolors.ENDC, end='')
 
@@ -70,21 +84,30 @@ class Node:
         self.type = FSType.DIRECTORY if os.path.isdir(path) else FSType.FILE
 
 def main():
-    #working_dir = os.getcwd()
-    #onlyfiles = [f for f in os.listdir(working_dir) if os.isfile(os.path.join(working_dir, f))]
-    start_dir = "C:\\Users\\orija\\OneDrive\\Documents\\SCHOOL"
 
     directory = Structure()
-    directory.update_dir( os.getcwd())
+    directory.update_dir( os.getcwd() )
 
     while True:
         match(keyboard.read_key()):
+
             case "up":
                 directory.move(-1)
             case "down":
                 directory.move(1)
-            case "right":
-                directory.update_dir(directory.root[directory.position].path)
+            case "right" | "enter":
+                path = directory.root[directory.position].path
+                if directory.root[directory.position].type == FSType.DIRECTORY:
+                    directory.update_dir(path)
+                else:
+                    if platform.system() == 'Darwin':
+                        subprocess.call(('open', path))
+                    elif platform.system() == 'Windows':
+                        os.startfile(path)
+                    else:
+                        subprocess.call(('xdg-open', path))
+            case "left" | "backspace":
+                directory.update_dir(directory.root[0].path)
 
         time.sleep(0.125)
         
