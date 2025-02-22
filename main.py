@@ -46,7 +46,7 @@ class Structure:
     def update_dir(self, path: str = None):
 
         if not path == None:
-            self.dir = path if len(path) > 2 else path + "\\"
+            self.dir = path if path.count('\\') > 0 else path + "\\"
 
         self.position = 0
         if not os.path.isdir(self.dir):
@@ -110,8 +110,14 @@ def main():
                 directory.move(-1 * (os.get_terminal_size().lines - TERMINAL_OFFSET))
             case"enter":
                 item = directory.root[directory.position]
+                prior_path = directory.dir
                 if directory.root[directory.position].type == FSType.DIRECTORY:
-                    directory.update_dir(item.path)
+                    try:
+                        directory.update_dir(item.path)
+                    except Exception as e:
+                        print(Colors.RED + "Error: Access to directory is denied.")
+                        time.sleep(1)
+                        directory.update_dir(prior_path)
                 else:
                     try:
                         if PLATFORM == 'Darwin':
