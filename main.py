@@ -1,13 +1,12 @@
 import os,sys,enum,time,subprocess,platform
 PLATFORM = platform.system()
-try:
 
+try:
     import keyboard
-except Exception as e:
+except ImportError as e:
     print(e)
     sys.exit(1)
-    
-
+  
 class Colors:
     BLUE = '\033[94m'
     GREEN = '\033[92m'
@@ -37,9 +36,10 @@ class Structure:
         self.position = value
         self.print_dir()
 
-    def update_dir(self, path=None):
+    def update_dir(self, path: str = None):
+
         if not path == None:
-            self.dir = path
+            self.dir = path if len(path) > 2 else path + "\\"
 
         self.position = 0
         if not os.path.isdir(self.dir):
@@ -88,25 +88,32 @@ def main():
     directory.update_dir()
 
     while True:
-        match(keyboard.read_key()):
 
+        match(keyboard.read_key()):
             case "up":
                 directory.move(-1)
             case "down":
                 directory.move(1)
             case "right" | "enter":
-                path = directory.root[directory.position].path
+                item = directory.root[directory.position]
                 if directory.root[directory.position].type == FSType.DIRECTORY:
-                    directory.update_dir(path)
+                    directory.update_dir(item.path)
                 else:
-                    if platform.system() == 'Darwin':
-                        subprocess.call(('open', path))
-                    elif platform.system() == 'Windows':
-                        os.startfile(path)
-                    else:
-                        subprocess.call(('xdg-open', path))
+                    try:
+                        if PLATFORM == 'Darwin':
+                            subprocess.call(('open', item.path))
+                        elif PLATFORM == 'Windows':
+                            os.startfile(item.path)
+                        else:
+                            subprocess.call(('xdg-open', item.path))
+                    except Exception:
+                        print(f"{Colors.RED}ERROR: Could not open file '{item.name}'{Colors.WHITE}")
             case "left" | "backspace":
                 directory.update_dir(directory.root[0].path)
+            case "esc":
+                print(Colors.YELLOW + "\nGoodbye!" + Colors.WHITE)
+                time.sleep(0.5)
+                sys.exit(1)
 
         time.sleep(0.125)
         
