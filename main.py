@@ -30,9 +30,15 @@ class Structure:
     def move(self, direction):
         value = self.position + direction
         if value < 0:
-            value = len(self.root) - 1
+            if direction < -1 and self.position != 0:
+                value = 0
+            else:
+                value = len(self.root) - 1
         elif value > len(self.root) - 1:
-            value = 0
+            if direction > 1 and self.position != len(self.root) - 1:
+                value = len(self.root) - 1
+            else:    
+                value = 0
 
         self.position = value
         self.print_dir()
