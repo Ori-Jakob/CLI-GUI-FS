@@ -8,17 +8,12 @@ except Exception as e:
     sys.exit(1)
     
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
+class Colors:
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    WHITE = '\033[0m'
 
 class FSType(enum.Enum):
     FILE = 1
@@ -27,7 +22,8 @@ class FSType(enum.Enum):
     OTHER = 4
 
 class Structure:
-    def __init__(self):
+    def __init__(self, path):
+        self.dir = path
         self.root = list()
         self.position = 0
 
@@ -41,19 +37,23 @@ class Structure:
         self.position = value
         self.print_dir()
 
-    def update_dir(self, path):
+    def update_dir(self, path=None):
+        if not path == None:
+            self.dir = path
+
         self.position = 0
-        if not os.path.isdir(path):
+        if not os.path.isdir(self.dir):
             return
-        self.root = [Node('\\'.join(path.split("\\")[:-1]), "...")]
+        self.root = [Node('\\'.join(self.dir.split("\\")[:-1]), "..")]
         
-        for root in os.listdir(path):
-            self.root.append(Node(path + '\\' + root, root))
+        for root in os.listdir(self.dir):
+            self.root.append(Node(self.dir + '\\' + root, root))
         self.print_dir()
 
     def print_dir(self):
 
         os.system('cls')
+        print(Colors.BLUE + "Directory: " + self.dir + Colors.WHITE)
         terminal_size = os.get_terminal_size().lines - 3
 
 
@@ -66,14 +66,12 @@ class Structure:
         for i in range(start, loop_amount):
 
             if i == self.position:
-                print(bcolors.OKGREEN + '> ', end="")
-
-
+                print(Colors.GREEN + '> ', end="")
             else:
-                print(bcolors.ENDC, end='')
+                print(Colors.WHITE, end='')
 
             if self.root[i].type == FSType.DIRECTORY:
-                print('/', end='')    
+                print('├ ', end='')    
 
             print(self.root[i].name)
     
@@ -85,8 +83,9 @@ class Node:
 
 def main():
 
-    directory = Structure()
-    directory.update_dir( os.getcwd() )
+    directory = Structure( 
+        os.getcwd() )
+    directory.update_dir()
 
     while True:
         match(keyboard.read_key()):
