@@ -10,6 +10,6 @@ Needs the `keyboard` library to be installed to correctly detect keyboard inputs
 `DOWN_ARROW`: Move down through the menu\
 `LEFT_ARROW`: Moves to the top item on the page\
 `RIGHT_ARROW`: Moves to the bottom item on the page\
-`ENTER`: Enter a folder or open a file\
+`ENTER`: Open a folder or file\
 `BACKSPACE`: Travel up a directory (you can also use the two dots at the top)\
 `ESC`: Exit the application
