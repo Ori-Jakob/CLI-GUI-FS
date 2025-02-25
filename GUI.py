@@ -24,7 +24,7 @@ class Structure:
         self.marked = {}
         self.stack = list()
         self.current_window_lines = os.get_terminal_size().lines
-        self.is_all_marked = False
+        self.not_all_marked = True
 
     def move(self, direction):
         value = self.position + direction
@@ -47,6 +47,7 @@ class Structure:
         if pos == -1 and self.position == 0: return # don't allow marking ".." (going up a dir)
 
         temp = self.root[self.position] if pos == -1 else self.root[pos]
+
         #TO-DO: Folder marking
         #we will not allow folder marking until I can come up with an implementation
         if temp.type == FSType.DIRECTORY: return
@@ -62,6 +63,7 @@ class Structure:
                 self.marked[self.dir] = list()
                 self.marked[self.dir].append(temp)
         else:
+            if pos == -1: self.not_all_marked = True
             temp.is_marked = False
             items = self.marked.get(self.dir, -1)
             if items != -1:
@@ -74,9 +76,9 @@ class Structure:
         for i in range(len(self.root)):
             #TO-DO: Allow folder marking
             if self.root[i].type == FSType.FILE:
-                if self.root[i].is_marked != self.is_all_marked: self.mark(pos=i)
+                if self.root[i].is_marked != self.not_all_marked: self.mark(pos=i)
 
-        self.is_all_marked = not self.is_all_marked
+        self.not_all_marked = not self.not_all_marked
         self.print_dir()
 
     def update_dir(self, path: str = None, pos: int = -1, restore=False):
