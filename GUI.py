@@ -1,4 +1,6 @@
-import os,enum
+import os
+from enum import Enum
+
 TERMINAL_OFFSET = 4
 
 class Colors:
@@ -8,7 +10,7 @@ class Colors:
     RED = '\033[91m'
     WHITE = '\033[0m'
 
-class FSType(enum.Enum):
+class FSType(Enum):
     FILE = 1
     DIRECTORY = 2
     LINK = 3
@@ -20,6 +22,8 @@ class Structure:
         self.root = list()
         self.position = 0
         self.marked = {}
+        self.stack = list()
+        self.current_window_lines = os.get_terminal_size().lines
 
     def move(self, direction):
         value = self.position + direction
@@ -38,12 +42,17 @@ class Structure:
         self.print_dir()
 
     def mark(self):
-
-        if self.position == 0: return
+        #self.__track__()
+        if self.position == 0: return # don't allow marking ".." (going up a dir)
 
         temp = self.root[self.position]
+        #TO-DO: Folder marking
+        #we will not allow folder marking until I can come up with an implementation
+        if temp.type == FSType.DIRECTORY: return
 
-        if not temp in self.marked:
+        if len(temp.path) == 0: return #don't allow makring if there is nothing in the folder
+
+        if not temp in self.marked.get(self.dir, []):
             temp.is_marked = True
             items = self.marked.get(self.dir, -1)
             if items != -1:
@@ -58,31 +67,40 @@ class Structure:
                 items.pop(items.index(temp))
         self.print_dir()
         
-    def update_dir(self, path: str = None):
+    def update_dir(self, path: str = None, pos: int = -1, restore=False):
+
+        if not restore: self.__track__()
+        if not os.path.isdir(self.dir): return
 
         if not path == None:
             self.dir = path if path.count('\\') > 0 else path + "\\"
 
-        self.position = 0
-        if not os.path.isdir(self.dir):
-            return
+        self.position = 0 if pos == -1 else pos
         self.root = [Node('\\'.join(self.dir.split("\\")[:-1]), "..", 0)]
         
         items = self.marked.get(self.dir, -1)
+
         for key, root in enumerate(os.listdir(self.dir)):
-            if items != -1:
-                found_pos = self.__find_marked__(key + 1)
-                if found_pos > -1:
-                    self.root.append(self.marked[self.dir][found_pos])
+            try:
+                path = os.path.join(self.dir, root)
+                if os.path.isdir(path): os.listdir(path) #throw an error if no acccess to folder
+                
+                if items != -1:
+                    found_pos = self.__find_marked__(key + 1)
+                    if found_pos > -1:
+                        self.root.append(self.marked[self.dir][found_pos])
+                    else:
+                        self.root.append(Node(path, root, key + 1))
                 else:
-                    self.root.append(Node(self.dir + '\\' + root, root, key + 1))
-            else:
-                self.root.append(Node(self.dir + '\\' + root, root, key + 1))
+                    self.root.append(Node(path, root, key + 1))
+            except Exception:
+                pass
 
         self.print_dir()
 
     def __instructions__(self):
-        print(Colors.YELLOW + "UP/DOWN=Move up/down, LEFT/RIGHT=Move up/down page, ENTER=Open folder/file,  BACKSPACE=Move up directory" + Colors.BLUE)
+        print(Colors.YELLOW + u"[\u2191/\u2193]=UP/DOWN | [\u2190/\u2192]=PAGE UP/DOWN | [ENTER]=OPEN\
+ | [BACKSPACE]=.. | [<]=UNDO" + f"({len(self.stack)})" + Colors.BLUE, end="\n")
         print("Directory: " + self.dir + Colors.WHITE)
 
     def __find_marked__(self, position):
@@ -94,6 +112,17 @@ class Structure:
                 return x
 
         return -1    
+    
+    def undo(self):
+        if len(self.stack) == 0: return 
+        state = self.stack.pop()
+        self.dir = state[0]
+        self.update_dir(pos=state[1], restore=True)
+
+    def __track__(self):
+        if len(self.stack) > 9: return
+        state = [self.dir, self.position]
+        self.stack.append(state)
 
     def print_dir(self):
 
@@ -109,11 +138,31 @@ class Structure:
 
 
         for i in range(start, loop_amount):
-            string = "[{0}] ".format("X" if self.root[i].is_marked else " ") if i != 0 else ""
+            #TO-DO: Folder marking
+            #we will not allow folder marking until I come up with a way to implement it
+            #if i == 0 or self.root[i].file_count == 0: string = ""
+            if self.root[i].type == FSType.DIRECTORY: string = "" 
+            else:
+                if self.root[i].type == FSType.DIRECTORY:
+                    temp = len(self.marked.get(self.root[i].path, []))
+                    try:
+                        dir_len = len(os.listdir(self.root[i].path))
+                        if dir_len == 0: value = " "
+                        elif temp == dir_len: value = "X"
+                        elif temp > 0: value = "-"
+                        else: value = " "
+                    except Exception:
+                        value = " "
+                else:
+                    if self.root[i].is_marked:
+                        value = "X"
+                    else:
+                        value = " "
+                string = "[{0}] ".format(value)
             if i == self.position:
                 print(Colors.GREEN + string, end="")
             else:
-                print(Colors.WHITE + string, end='')
+                print(Colors.WHITE + string, end="")
 
             if self.root[i].type == FSType.DIRECTORY:
                 print('├─', end='')    
@@ -126,4 +175,5 @@ class Node:
         self.name = name
         self.position = pos
         self.type = FSType.DIRECTORY if os.path.isdir(path) else FSType.FILE
+        self.file_count = len(os.listdir(path)) if self.type == FSType.DIRECTORY else -1
         self.is_marked = False
