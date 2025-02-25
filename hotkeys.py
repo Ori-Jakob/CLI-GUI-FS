@@ -50,3 +50,4 @@ def setup_hotkeys(directory: Structure):
     keyboard.add_hotkey("backspace", lambda: directory.update_dir(directory.root[0].path))
     keyboard.add_hotkey("enter", lambda: do_enter(directory))
     keyboard.add_hotkey("esc", lambda: do_esc(directory))
+    keyboard.add_hotkey("ctrl+a", lambda: directory.mark_all())

@@ -24,6 +24,7 @@ class Structure:
         self.marked = {}
         self.stack = list()
         self.current_window_lines = os.get_terminal_size().lines
+        self.is_all_marked = False
 
     def move(self, direction):
         value = self.position + direction
@@ -41,11 +42,11 @@ class Structure:
         self.position = value
         self.print_dir()
 
-    def mark(self):
+    def mark(self, pos=-1):
         #self.__track__()
-        if self.position == 0: return # don't allow marking ".." (going up a dir)
+        if pos == -1 and self.position == 0: return # don't allow marking ".." (going up a dir)
 
-        temp = self.root[self.position]
+        temp = self.root[self.position] if pos == -1 else self.root[pos]
         #TO-DO: Folder marking
         #we will not allow folder marking until I can come up with an implementation
         if temp.type == FSType.DIRECTORY: return
@@ -65,8 +66,19 @@ class Structure:
             items = self.marked.get(self.dir, -1)
             if items != -1:
                 items.pop(items.index(temp))
+
+        if pos == -1: self.print_dir() #only update imediately if we aren't marking all
+
+
+    def mark_all(self):
+        for i in range(len(self.root)):
+            #TO-DO: Allow folder marking
+            if self.root[i].type == FSType.FILE:
+                if self.root[i].is_marked != self.is_all_marked: self.mark(pos=i)
+
+        self.is_all_marked = not self.is_all_marked
         self.print_dir()
-        
+
     def update_dir(self, path: str = None, pos: int = -1, restore=False):
 
         if not restore: self.__track__()
@@ -100,7 +112,7 @@ class Structure:
 
     def __instructions__(self):
         print(Colors.YELLOW + u"[\u2191/\u2193]=UP/DOWN | [\u2190/\u2192]=PAGE UP/DOWN | [ENTER]=OPEN\
- | [BACKSPACE]=.. | [<]=UNDO" + f"({len(self.stack)})" + Colors.BLUE, end="\n")
+ | [BACKSPACE]=.. | [<]=UNDO" + f"({len(self.stack)}) | [CTRL+A]=UN/MARK ALL" + Colors.BLUE, end="\n")
         print("Directory: " + self.dir + Colors.WHITE)
 
     def __find_marked__(self, position):

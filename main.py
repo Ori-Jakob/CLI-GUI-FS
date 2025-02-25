@@ -4,7 +4,6 @@ import hotkeys as h
 
 
 def main():
-    
     directory = Structure( os.getcwd() )
     directory.update_dir(restore=True)
     h.setup_hotkeys(directory)
@@ -16,7 +15,7 @@ def main():
         if h.SHOULD_EXIT:
             sys.exit(1)
 
-        time.sleep(0.1)
+        time.sleep(0.15)
         
 if __name__ == "__main__":
     main()
