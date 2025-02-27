@@ -14,9 +14,11 @@ Needs the `keyboard` library to be installed to correctly detect keyboard inputs
 `BACKSPACE` - Travel up a directory (you can also use the two dots at the top)\
 `<` - Undo a directory chnage\
 `CTRL+A` - Mark all in directory\
+`CTRL+D` - Drive selection
 `ESC`: Exit the application
 
 # TO-DO
-- [ ] Folder marking
+- [x] Switching Drives
+- [ ] Folder Marking
 - [ ] File Operations
-- [ ] LAN peer-peer file transfers 
+- [ ] LAN Peer-Peer File Transfers 

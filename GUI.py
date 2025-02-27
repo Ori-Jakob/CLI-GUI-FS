@@ -1,4 +1,4 @@
-import os
+import os, psutil
 from enum import Enum
 
 TERMINAL_OFFSET = 4
@@ -10,10 +10,14 @@ class Colors:
     RED = '\033[91m'
     WHITE = '\033[0m'
 
+class Action(Enum):
+    FILE_SYSTEM = 0
+    CHANGE_DRIVE = 1
+
 class FSType(Enum):
     FILE = 1
     DIRECTORY = 2
-    LINK = 3
+    DRIVE = 3
     OTHER = 4
 
 class Structure:
@@ -25,8 +29,9 @@ class Structure:
         self.stack = list()
         self.current_window_lines = os.get_terminal_size().lines
         self.not_all_marked = True
+        self.current_action = Action.FILE_SYSTEM
 
-    def move(self, direction):
+    def move_cursor(self, direction):
         value = self.position + direction
         if value < 0:
             if direction < -1 and self.position != 0:
@@ -43,7 +48,7 @@ class Structure:
         self.print_dir()
 
     def mark(self, pos=-1):
-        #self.__track__()
+
         if pos == -1 and self.position == 0: return # don't allow marking ".." (going up a dir)
 
         temp = self.root[self.position] if pos == -1 else self.root[pos]
@@ -81,16 +86,30 @@ class Structure:
         self.not_all_marked = not self.not_all_marked
         self.print_dir()
 
+    def change_drive(self):
+        self.current_action = Action.CHANGE_DRIVE
+        self.__track__()
+        disks = psutil.disk_partitions()
+        dir = list()
+        for x in range(len(disks)):
+            dir.append(Node(disks[x][0], disks[x][1], x, FSType.DRIVE))
+        self.dir = ""
+        self.root = dir
+        self.position = 0
+        self.print_dir()
+
     def update_dir(self, path: str = None, pos: int = -1, restore=False):
 
-        if not restore: self.__track__()
-        if not os.path.isdir(self.dir): return
-
+        
+        if self.dir != "" and not restore and self.dir != path: self.__track__()
+        if self.dir != "" and not os.path.isdir(self.dir): return
         if not path == None:
             self.dir = path if path.count('\\') > 0 else path + "\\"
 
+        self.current_action = Action.FILE_SYSTEM
         self.position = 0 if pos == -1 else pos
-        self.root = [Node('\\'.join(self.dir.split("\\")[:-1]), "..", 0)]
+        new_dir = self.__path_join__(self.dir.split("\\"), "\\")
+        self.root = [Node(new_dir, "..", 0, None if new_dir != "" else FSType.OTHER)]
         
         items = self.marked.get(self.dir, -1)
 
@@ -112,10 +131,62 @@ class Structure:
 
         self.print_dir()
 
+    def print_dir(self):
+
+        os.system('cls')
+        self.__instructions__()
+        terminal_size = os.get_terminal_size().lines - TERMINAL_OFFSET
+
+        start = self.position - terminal_size if self.position > terminal_size else 0
+        loop_amount = len(self.root) if len(self.root) < terminal_size else terminal_size + start + 1
+
+        for i in range(start, loop_amount):
+
+            item = self.root[i]
+            #TO-DO: Folder marking
+            #we will not allow folder marking until I come up with a way to implement it
+            #if i == 0 or self.root[i].file_count == 0: string = ""
+            if item.type != FSType.FILE or item.type == FSType.OTHER: string = "" 
+            else:
+                if item.type == FSType.DIRECTORY:
+                    temp = len(self.marked.get(item.path, []))
+                    try:
+                        dir_len = len(os.listdir(item.path))
+                        if dir_len != 0 and temp == dir_len: value = "X"
+                        elif temp > 0: value = "-"
+                        else: value = " "
+                    except Exception:
+                        value = " "
+                else:
+                    if item.is_marked:
+                        value = "X"
+                    else:
+                        value = " "
+                string = "[{0}] ".format(value)
+            if i == self.position:
+                self.__color_print__(string, color=Colors.GREEN, end="")
+            else:
+                self.__color_print__(string, color=Colors.WHITE, end="")
+
+            if item.type != FSType.FILE:
+                print(' ├─', end='')    
+
+            print(item.name)
+
+    def undo(self):
+        if len(self.stack) == 0: return 
+        state = self.stack.pop()
+        self.dir = state[0]
+        self.update_dir(pos=state[1], restore=True)
+
     def __instructions__(self):
-        print(Colors.YELLOW + u"[\u2191/\u2193]=UP/DOWN | [\u2190/\u2192]=PAGE UP/DOWN | [ENTER]=OPEN\
- | [BACKSPACE]=.. | [<]=UNDO" + f"({len(self.stack)}) | [CTRL+A]=UN/MARK ALL" + Colors.BLUE, end="\n")
-        print("Directory: " + self.dir + Colors.WHITE)
+        self.__color_print__(u"[\u2191/\u2193]=UP/DOWN | [\u2190/\u2192]=PAGE UP/DOWN | [ENTER]=OPEN\
+ | [BACKSPACE]=.. | [<]=UNDO" + f"({len(self.stack)}) | [CTRL+A]=UN/MARK ALL | [CTRL+D]=CHANGE DRIVE", color=Colors.YELLOW)
+        match(self.current_action):
+            case Action.CHANGE_DRIVE:
+                self.__color_print__("Select a drive:", Colors.BLUE)
+            case Action.FILE_SYSTEM:
+                self.__color_print__("Directory: " + self.dir, Colors.BLUE)
 
     def __find_marked__(self, position):
         items = self.marked.get(self.dir, -1)
@@ -126,68 +197,27 @@ class Structure:
                 return x
 
         return -1    
-    
-    def undo(self):
-        if len(self.stack) == 0: return 
-        state = self.stack.pop()
-        self.dir = state[0]
-        self.update_dir(pos=state[1], restore=True)
 
+    def __path_join__(self, path: list, str_join: str):
+        string = str()
+        if len(path) > 2: string = str_join.join(path[:-1])
+        elif len(path) == 2: string = path[0] + str_join
+        if string == self.dir: string = ""
+        return string
+    
     def __track__(self):
         if len(self.stack) > 9: return
         state = [self.dir, self.position]
         self.stack.append(state)
 
-    def print_dir(self):
-
-        os.system('cls')
-        self.__instructions__()
-        terminal_size = os.get_terminal_size().lines - TERMINAL_OFFSET
-
-
-
-        start = self.position - terminal_size if self.position > terminal_size else 0
-        loop_amount = len(self.root) if len(self.root) < terminal_size else terminal_size + start + 1
-
-
-
-        for i in range(start, loop_amount):
-            #TO-DO: Folder marking
-            #we will not allow folder marking until I come up with a way to implement it
-            #if i == 0 or self.root[i].file_count == 0: string = ""
-            if self.root[i].type == FSType.DIRECTORY: string = "" 
-            else:
-                if self.root[i].type == FSType.DIRECTORY:
-                    temp = len(self.marked.get(self.root[i].path, []))
-                    try:
-                        dir_len = len(os.listdir(self.root[i].path))
-                        if dir_len == 0: value = " "
-                        elif temp == dir_len: value = "X"
-                        elif temp > 0: value = "-"
-                        else: value = " "
-                    except Exception:
-                        value = " "
-                else:
-                    if self.root[i].is_marked:
-                        value = "X"
-                    else:
-                        value = " "
-                string = "[{0}] ".format(value)
-            if i == self.position:
-                print(Colors.GREEN + string, end="")
-            else:
-                print(Colors.WHITE + string, end="")
-
-            if self.root[i].type == FSType.DIRECTORY:
-                print('├─', end='')    
-
-            print(self.root[i].name)
+    def __color_print__(self, string, color=Colors.WHITE, end="\n"):
+        print(color+string, end=end)
     
 class Node:
-    def __init__(self, path, name, pos):  
+    def __init__(self, path, name, pos, type=None):  
         self.path = path
         self.name = name
         self.position = pos
-        self.type = FSType.DIRECTORY if os.path.isdir(path) else FSType.FILE
+        self.type = type if type != None else FSType.DIRECTORY if os.path.isdir(path) else FSType.FILE
         self.file_count = len(os.listdir(path)) if self.type == FSType.DIRECTORY else -1
         self.is_marked = False
